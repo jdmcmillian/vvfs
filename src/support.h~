@@ -1,0 +1,76 @@
+#ifndef ___SUPPORT_H_INCLUDED___
+#define ___SUPPORT_H_INCLUDED___ 
+
+#define FUSE_USE_VERSION 26
+
+#include <fuse.h>
+#include <stdio.h>
+#include <cstring>
+#include <string>
+#include <iostream>
+#include <errno.h>
+#include <fcntl.h>
+#include <vector>
+#include <sstream>
+#include <cstdlib>
+#include <tiffio.h>
+
+using namespace std;
+
+	bool hasEnding (std::string const &fullString, std::string const &ending);
+	vector<string> &split(const string &s, char delim, vector<string> &elems);
+	vector<string> split(const string &s, char delim);
+	string IntToString(int number);
+
+
+static const char *svfs_str = "Hello World!\n";
+static const char *svfs_evaluate_path 			= "/process";
+static const char *svfs_details_path 			= "/details";
+static const char *svfs_solution_path 			= "/solution.txt";
+
+#include "commands.h"
+#include "integration.h"
+
+
+
+
+//namespace vvfs{
+
+	bool hasEnding (std::string const &fullString, std::string const &ending) {
+		if (fullString.length() >= ending.length()) {
+			return (0 == fullString.compare (fullString.length() - ending.length(), ending.length(), ending));
+		} else {
+			return false;
+		}
+	}
+
+	vector<string> &split(const string &s, char delim, vector<string> &elems) {
+		stringstream ss(s);
+		string item;
+		while (getline(ss, item, delim)) {
+			elems.push_back(item);
+		}
+		return elems;
+	}
+
+
+	vector<string> split(const string &s, char delim) {
+		vector<string> elems;
+		split(s, delim, elems);
+		return elems;
+	}
+
+	string IntToString(int number)
+	{
+		stringstream ss;//create a stringstream
+		ss << number;//add number to the stream
+		return ss.str();//return a string with the contents of the stream
+	}
+//}
+
+
+
+
+
+#endif
+

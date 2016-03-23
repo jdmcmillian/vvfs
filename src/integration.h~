@@ -1,0 +1,197 @@
+#ifndef ___VVFS_H_INCLUDED___
+#define ___VVFS_H_INCLUDED___
+
+#define FUSE_USE_VERSION 26
+
+using namespace std;
+
+//	VIRTUAL FILE SYSTEM FUNCTION CALLS:  -- from svfs.cpp
+namespace vvfs {
+	static int svfs_getattr(const char *path, struct stat *stbuf);
+	static int svfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi);
+	static int svfs_open(const char *path, struct fuse_file_info *fi);
+	static int svfs_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi);
+//	GLOBAL VARIABLES AND STRUCTURES ENTRY POINT:  -- from svfs.cpp
+
+
+static struct svfs_operations : fuse_operations {
+	svfs_operations () {
+			getattr = vvfs::svfs_getattr;
+			readdir = vvfs::svfs_readdir;
+			open    = vvfs::svfs_open;
+			read    = vvfs::svfs_read;
+		}
+	} svfs_oper_init;
+	svfs_operations so;
+}
+
+
+namespace vvfs{
+	static int svfs_getattr(const char *path, struct stat *stbuf){
+		int res = 0;
+		memset(stbuf, 0, sizeof(struct stat));
+		//
+		//-----------------------------------------
+		//	evaluate each step of the path
+		string str_path (path);
+		vector<string> commands = split(str_path, '/');
+
+		printf("--svfs_getattr [len:%d :%d] %s\n", (int)str_path.length(), (int)commands.size(), str_path.c_str());
+
+
+		//-----------------------------------------
+		//
+		if (strcmp(path, "/") == 0) {
+			//		printf("*** LISTING : DIRECTORY : %s\n", path);
+			stbuf->st_mode = S_IFDIR | 0755;
+			stbuf->st_nlink = 2;
+			stbuf->st_size = 0;
+			//
+		} else if (hasEnding(path, svfs_evaluate_path)) {
+			//	evaluate the path //printf("*** TERMINAL OPERATION - EVALUATE THE PATH ***\n");
+			stbuf->st_mode = S_IFREG | 0744;
+			stbuf->st_nlink = 1;
+			stbuf->st_size = 99;
+			//
+		} else if (strcmp(path, svfs_evaluate_path) == 0) {
+			//		printf("*** LISTING : FILE ENTRY : %s\n", svfs_evaluate_path);
+			stbuf->st_mode = S_IFREG | 0744;
+			stbuf->st_nlink = 1;
+			stbuf->st_size = 99;
+			//
+		} else if (hasEnding(path, svfs_solution_path)) { 
+			//	evaluate the path
+			printf("*** TERMINAL OPERATION - GET SOLUTION OF THE PATH ***\n");
+			stbuf->st_mode = S_IFREG | 0744;
+			stbuf->st_nlink = 1;
+			stbuf->st_size = 99;
+			//
+		} else if (strcmp(path, svfs_solution_path) == 0) {
+			//
+			printf("*** LISTING : FILE ENTRY : %s\n", svfs_solution_path);
+			stbuf->st_mode = S_IFREG | 0744;
+			stbuf->st_nlink = 1;
+			stbuf->st_size = strlen(svfs_str);
+			//
+		} else {
+			if(strcmp(svfs_evaluate_path, path) == 4 ) {
+				//printf("*** OPERATIONAL DIRECTORY : ADD : %s ***\n", path);
+				stbuf->st_mode=S_IFDIR | 0444;
+				stbuf->st_nlink = 1;
+				stbuf->st_size = 0;
+			} else {//
+				printf("*** LISTING : ** UNKNOWN CALL ** : %s\n", path);
+				res = -ENOENT;
+			}
+		}
+		return res;
+	}
+					
+	static int svfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi){
+		(void) offset;
+		(void) fi;
+
+		printf("***** CALL [READDIR] : PATH %s\n",path);
+
+		//	********** VALIDATE PATHS HERE, TO DETERMINE 
+		//			WHAT PATHS ARE AVAILABLE FROM THIS POINT
+		if (strcmp(path, "/") == 0) {
+			//      --- BASIC STRUCTURE
+			filler(buf, ".", NULL, 0);
+			filler(buf, "..", NULL, 0);
+			//      --- OPERATIONS
+			filler(buf, commands::Add::Listing+1, NULL, 0);
+			filler(buf, commands::Invert::Listing+1, NULL, 0);
+			//      --- DATA OUTPUT
+			//filler(buf, svfs_solution_path+1, NULL, 0);
+			//filler(buf, svfs_evaluate_path+1, NULL, 0);
+			//
+			return 0;
+		} else if (strcmp(svfs_evaluate_path, path) == 4 ) {
+			//	--- BASIC STRUCTURE
+			filler(buf, ".", NULL, 0);
+			filler(buf, "..", NULL, 0);
+			//      --- OPERATIONS
+			//filler(buf, svfs_add_operation+1, NULL, 0);	// Can only add once, so it does not appear in sub folders under add.
+			//      --- DATA OUTPUT
+			//filler(buf, svfs_solution_path+1, NULL, 0);
+			//filler(buf, svfs_evaluate_path+1, NULL, 0);
+			//
+			return 0;		
+		}
+		return -ENOENT;	// NO VALID PATH
+	}
+
+	static int svfs_open(const char *path, struct fuse_file_info *fi){
+		int result = -ENOENT;
+		//        printf("***** CALL [OPEN] : PATH %s\n",path);
+		if (strcmp(path, commands::Add::Header) == 0) result = 0;
+		if (strcmp(path, commands::Invert::Header) == 0) result =0;
+
+		if (hasEnding(path, svfs_solution_path)) result = 0;
+		if (hasEnding(path, svfs_evaluate_path)) result = 0;
+		if ((fi->flags & 3) != O_RDONLY)  return -EACCES;
+		return result;
+	}
+
+	static int svfs_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi){
+		string str_path (path);
+		size_t len;
+		(void) fi;
+
+		//printf("* * * * * ********** CALL [READ] : PATH %s\n",path);
+
+		vector<string> commands = split(str_path, '/');
+
+		if(hasEnding(str_path, svfs_evaluate_path)){
+			printf("Evaluating...\n");
+			for(vector<string>::iterator it = commands.begin(); it != commands.end(); ++it){
+				string command = *it;
+				printf(" ..... %s\n", (char*)command.c_str());
+				if(command.compare(0,4,commands::Add::Listing+1)==-4){
+					//	parse and execute
+					string operands = command.substr(4, command.length()-5);
+					printf(" ........ Operands:%s\n", (char*)operands.c_str());
+					vector<string> args = split(operands, ',');
+					int sum=0;
+					for(vector<string>::iterator itarg = args.begin(); itarg != args.end(); ++itarg){
+						sum+=atoi((*itarg).c_str());
+					}
+					printf(" ............Result : %d\n", sum);
+
+					stringstream output;
+					output << str_path << " = " << sum << "\n";				
+					const char* result = output.str().c_str();
+
+					len = strlen(result);
+					printf(" .................output : [%d] %s\n", (int)len, result);
+					if (offset < len) {
+						if (offset + size > len) size = len - offset;
+						memcpy(buf, result + offset, size);
+					}
+					size = len;
+				}
+			}
+			printf("Program completed\n");
+
+			//
+		} else if(hasEnding(str_path, svfs_solution_path)){
+			printf("Hello World, you are at '%s'!!!\n", path);
+			len = strlen(svfs_str);
+			if (offset < len) {
+				if (offset + size > len)
+					size = len - offset;
+				memcpy(buf, svfs_str + offset, size);
+			} 
+			//
+		} else {
+			size = 0;
+		}
+		//        if(strcmp(path, svfs_path) != 0 ) return -ENOENT;
+		return size;
+	}
+
+}
+
+
+#endif

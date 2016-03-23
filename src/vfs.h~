@@ -1,0 +1,39 @@
+#ifndef ___VVFS_H_INCLUDED___
+#define ___VVFS_H_INCLUDED___
+
+#define FUSE_USE_VERSION 26
+
+using namespace std;
+
+
+//	VIRTUAL FILE SYSTEM FUNCTION CALLS:  -- from svfs.cpp
+static int svfs_getattr(const char *path, struct stat *stbuf);
+static int svfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi);
+static int svfs_open(const char *path, struct fuse_file_info *fi);
+static int svfs_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi);
+
+//	GLOBAL VARIABLES AND STRUCTURES ENTRY POINT:  -- from svfs.cpp
+
+
+
+namespace vvfs{
+	static struct svfs_operations : fuse_operations {
+		svfs_operations () {
+				getattr = svfs_getattr;
+				readdir = svfs_readdir;
+				open    = svfs_open;
+				read    = svfs_read;
+			}
+		} svfs_oper_init;
+		svfs_operations so;
+
+	namespace fuse{
+
+
+
+
+	
+	}
+}
+
+#endif
